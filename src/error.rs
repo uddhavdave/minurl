@@ -4,4 +4,6 @@ use thiserror::Error;
 pub enum ApiError {
     #[error("connection to database failed")]
     DatabaseConnFailed,
+    #[error("Request failed")]
+    RequestFailed,
 }

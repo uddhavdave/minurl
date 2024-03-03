@@ -1,17 +1,18 @@
+use actix_web::dev::Service;
 use actix_web::App;
-use actix_web::{web, HttpServer, Responder};
-// use cdrs::cluster::GetConnection;
-use error::ApiError;
+use actix_web::HttpServer;
 use lazy_static::lazy_static;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 mod apis;
-// mod db;
 mod error;
+mod middleware;
 
 use apis::create;
-// use db::create_db_session;
+use apis::metrics;
+use apis::redirect_req;
+use middleware::capture_usage;
 
 use std::sync::RwLock;
 
@@ -19,11 +20,14 @@ pub type Url = String;
 pub type Uri = String;
 pub type Cache = Arc<RwLock<CacheInner>>;
 
+#[derive(Default)]
 pub struct CacheInner {
     /// Maps shortened URIs to their respective URLs
     map: HashMap<Uri, Url>,
     /// Keeps track of URLs which are shortened
     set: HashSet<Url>,
+    /// Tracks usage of short Urls
+    usage_map: HashMap<Url, u32>,
 }
 
 impl CacheInner {
@@ -31,11 +35,14 @@ impl CacheInner {
         CacheInner {
             map: HashMap::new(),
             set: HashSet::new(),
+            usage_map: HashMap::new(),
         }
     }
 }
 
 lazy_static! {
+    /// Initiate local cache to store url mappings on memory
+    /// This state will be shared by all the APIs inorder to perform validations
     static ref CACHE: Cache = Arc::new(RwLock::new(CacheInner::new()));
 }
 
@@ -48,14 +55,31 @@ async fn main() -> std::io::Result<()> {
     //     })
     //     .get_connection()
     //     .unwrap();
-
-    // Initiate local cache to store url mappings on memory
-    // This state will be shared by all the APIs inorder to perform validations
-    let _ = CACHE;
-    HttpServer::new(|| App::new().service(create))
-        .bind(("127.0.0.1", 8800))?
-        .run()
-        .await;
-
-    Ok(())
+    println!("Started listengin on port 8080");
+    HttpServer::new(|| {
+        App::new()
+            .service(create)
+            .service(metrics)
+            .service(redirect_req)
+            // following is the middleware function which updates the stats for analytics
+            // Ideally these changes are made in a different Transaction or are
+            // pushed to an external service like apache kafka, but here we are
+            // tracking it on memory
+            .wrap_fn(|req, svc| {
+                let fut = svc.call(req);
+                async {
+                    let res = fut.await?;
+                    if let Some(location) = res.headers().get("location") {
+                        let url = location.to_str().map_err(|_| {
+                            actix_web::error::ErrorInternalServerError("Invalid redirection url")
+                        })?;
+                        let _ = capture_usage(url);
+                    }
+                    Ok(res)
+                }
+            })
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
