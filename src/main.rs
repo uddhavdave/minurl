@@ -55,7 +55,7 @@ async fn main() -> std::io::Result<()> {
     //     })
     //     .get_connection()
     //     .unwrap();
-    println!("Started listengin on port 8080");
+    println!("Started listening on port 8080");
     HttpServer::new(|| {
         App::new()
             .service(create)
