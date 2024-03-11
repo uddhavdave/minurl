@@ -55,6 +55,7 @@ async fn main() -> std::io::Result<()> {
     //     })
     //     .get_connection()
     //     .unwrap();
+    //
     println!("Started listening on port 8080");
     HttpServer::new(|| {
         App::new()
@@ -69,6 +70,7 @@ async fn main() -> std::io::Result<()> {
                 let fut = svc.call(req);
                 async {
                     let res = fut.await?;
+                    // Checks if response is redirect
                     if let Some(location) = res.headers().get("location") {
                         let url = location.to_str().map_err(|_| {
                             actix_web::error::ErrorInternalServerError("Invalid redirection url")
@@ -79,7 +81,7 @@ async fn main() -> std::io::Result<()> {
                 }
             })
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(("0.0.0.0", 8080))?
     .run()
     .await
 }

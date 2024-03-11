@@ -6,4 +6,6 @@ WORKDIR /app
 
 COPY ./target/x86_64-unknown-linux-gnu/release/Minurl /app/Minurl
 
+EXPOSE 8080
+
 CMD ["/app/Minurl"]
