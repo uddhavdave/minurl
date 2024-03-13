@@ -24,13 +24,18 @@ pub async fn create(
     let mut cache = CACHE.write().unwrap();
     // Check if URL already exists
     if cache.set.contains(&req.long_url) {
-        return Err(actix_web::error::ErrorBadRequest("Url already shortened"));
+        let short_url = cache.rev_map.get(&req.long_url).unwrap().to_owned();
+
+        return Ok(web::Json(CreateShortUrlResponse { short_url }));
     }
 
     let short_url = generate_unique_token(&req.long_url, &cache.map);
 
     cache.set.insert(req.long_url.clone());
     cache.map.insert(short_url.clone(), req.long_url.clone());
+    cache
+        .rev_map
+        .insert(req.long_url.clone(), short_url.clone());
 
     Ok(web::Json(CreateShortUrlResponse { short_url }))
 }

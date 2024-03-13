@@ -24,6 +24,8 @@ pub type Cache = Arc<RwLock<CacheInner>>;
 pub struct CacheInner {
     /// Maps shortened URIs to their respective URLs
     map: HashMap<Uri, Url>,
+    /// Maps URLs to their respective URLs
+    rev_map: HashMap<Url, Uri>,
     /// Keeps track of URLs which are shortened
     set: HashSet<Url>,
     /// Tracks usage of short Urls
@@ -33,8 +35,13 @@ pub struct CacheInner {
 impl CacheInner {
     pub fn new() -> Self {
         CacheInner {
+            // Mapping ShortUrls -> LongUrls
             map: HashMap::new(),
+            // Mapping LongUrls -> ShortUrls
+            rev_map: HashMap::new(),
+            // Validation
             set: HashSet::new(),
+            // Metrics
             usage_map: HashMap::new(),
         }
     }
