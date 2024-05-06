@@ -1,0 +1,13 @@
+
+services:
+  web:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - cassandra
+    restart: "always"
+  cassandra:
+    image: "cassandra:latest"
+    ports:
+      - "8081:9042"

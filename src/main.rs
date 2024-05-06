@@ -1,17 +1,20 @@
 use actix_web::dev::Service;
+use actix_web::web::Data;
 use actix_web::App;
 use actix_web::HttpServer;
 use lazy_static::lazy_static;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 mod apis;
+mod db;
 mod error;
 mod middleware;
 
 use apis::create;
 use apis::metrics;
 use apis::redirect_req;
+use db::DbExecutor;
 use middleware::capture_usage;
 
 use std::sync::RwLock;
@@ -24,10 +27,6 @@ pub type Cache = Arc<RwLock<CacheInner>>;
 pub struct CacheInner {
     /// Maps shortened URIs to their respective URLs
     map: HashMap<Uri, Url>,
-    /// Maps URLs to their respective URLs
-    rev_map: HashMap<Url, Uri>,
-    /// Keeps track of URLs which are shortened
-    set: HashSet<Url>,
     /// Tracks usage of short Urls
     usage_map: HashMap<Url, u32>,
 }
@@ -37,10 +36,6 @@ impl CacheInner {
         CacheInner {
             // Mapping ShortUrls -> LongUrls
             map: HashMap::new(),
-            // Mapping LongUrls -> ShortUrls
-            rev_map: HashMap::new(),
-            // Validation
-            set: HashSet::new(),
             // Metrics
             usage_map: HashMap::new(),
         }
@@ -55,16 +50,13 @@ lazy_static! {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // let session = create_db_session()
-    //     .unwrap_or_else(|e| {
-    //         eprintln!("Failed to connect to the database: {}", e);
-    //         process::exit(1);
-    //     })
-    //     .get_connection()
-    //     .unwrap();
-    //
+    println!("URL Shortener running.....");
+
+    println!("Init Database.....");
+    let db_handler = Data::new(DbExecutor::build().await.expect("connection failed"));
+
     println!("Started listening on port 8080");
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
             .service(create)
             .service(metrics)
@@ -73,6 +65,7 @@ async fn main() -> std::io::Result<()> {
             // Ideally these changes are made in a different Transaction or are
             // pushed to an external service like apache kafka, but here we are
             // tracking it on memory
+            .app_data(db_handler.clone())
             .wrap_fn(|req, svc| {
                 let fut = svc.call(req);
                 async {

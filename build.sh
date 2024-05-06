@@ -1,7 +1,6 @@
 #!/bin/bash -ex
+#
+docker pull clux/muslrust:stable
+docker run -v $PWD:/volume --rm -t clux/muslrust:stable cargo build --release
 
-cargo test;
-
-CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=x86_64-unknown-linux-gnu-gcc cargo build --release --target x86_64-unknown-linux-gnu 
-
-docker build . -t minurl
+docker build --progress=plain . -t minurl

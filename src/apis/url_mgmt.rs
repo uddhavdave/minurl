@@ -1,5 +1,8 @@
+use crate::db::DbExecutor;
+use crate::error::ApiError;
 use crate::Uri;
 use crate::Url;
+use chrono::Utc;
 use std::collections::HashMap;
 
 /// Includes CRUD APIS for managing shortened URLS
@@ -11,6 +14,7 @@ use actix_web::{post, web, Result};
 
 #[post("/create")]
 pub async fn create(
+    db: web::Data<DbExecutor>,
     req: web::Json<CreateShortUrlRequest>,
 ) -> Result<web::Json<CreateShortUrlResponse>> {
     println!("Received request for {}", &req.long_url);
@@ -21,21 +25,22 @@ pub async fn create(
         ));
     }
 
-    let mut cache = CACHE.write().unwrap();
     // Check if URL already exists
-    if cache.set.contains(&req.long_url) {
-        let short_url = cache.rev_map.get(&req.long_url).unwrap().to_owned();
-
-        return Ok(web::Json(CreateShortUrlResponse { short_url }));
+    if let Ok(mut rows) = db
+        .get_url_by_long_url(req.long_url.clone())
+        .await
+        .map_err(|e| actix_web::error::ErrorInternalServerError(e.to_string()))?
+        .rows_typed::<(String, String, String)>()
+    {
+        if let Some(Ok((short_url, _, _))) = rows.next() {
+            return Ok(web::Json(CreateShortUrlResponse { short_url }));
+        }
     }
 
-    let short_url = generate_unique_token(&req.long_url, &cache.map);
-
-    cache.set.insert(req.long_url.clone());
-    cache.map.insert(short_url.clone(), req.long_url.clone());
-    cache
-        .rev_map
-        .insert(req.long_url.clone(), short_url.clone());
+    let short_url = generate_unique_token(&req.long_url, &CACHE.read().unwrap().map);
+    db.insert_to_url(req.long_url.clone(), short_url.clone(), Utc::now())
+        .await
+        .map_err(|e| ApiError::DatabaseConnFailed(e.to_string()))?;
 
     Ok(web::Json(CreateShortUrlResponse { short_url }))
 }

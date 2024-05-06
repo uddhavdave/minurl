@@ -1,13 +1,15 @@
 [package]
-name = "Minurl"
+name = "minurl"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 actix-web = "4.5.1"
 base64 = "0.22.0"
-chrono = "0.4.34"
+chrono = { version  = "0.4", features = ["serde"]}
 lazy_static = "1.4.0"
 md5 = "0.7.0"
+scylla = { version = "0.12.0", features = ["chrono"]}
+scylla-macros = "0.4.0"
 serde = {version = "1.0.197", features= ["derive"]}
 thiserror = "1.0.57"

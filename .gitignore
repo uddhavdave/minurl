@@ -1,1 +1,5 @@
 /target
+test
+.idea/
+requirements.txt
+*.cql
