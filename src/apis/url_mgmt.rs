@@ -1,7 +1,4 @@
-use crate::db::DbExecutor;
-use crate::error::ApiError;
-use crate::Uri;
-use crate::Url;
+use crate::{db::DbExecutor, error::ApiError, Uri, Url};
 use chrono::Utc;
 use std::collections::HashMap;
 
@@ -17,8 +14,6 @@ pub async fn create(
     db: web::Data<DbExecutor>,
     req: web::Json<CreateShortUrlRequest>,
 ) -> Result<web::Json<CreateShortUrlResponse>> {
-    println!("Received request for {}", &req.long_url);
-
     if !(req.long_url.starts_with("http://") || req.long_url.starts_with("https://")) {
         return Err(actix_web::error::ErrorBadRequest(
             "Invalid URL (must start with http(s)://)",
@@ -26,13 +21,14 @@ pub async fn create(
     }
 
     // Check if URL already exists
-    if let Ok(mut rows) = db
+    if let Ok(rows) = db
         .get_url_by_long_url(req.long_url.clone())
         .await
         .map_err(|e| actix_web::error::ErrorInternalServerError(e.to_string()))?
-        .rows_typed::<(String, String, String)>()
+        .rows_typed::<(String, chrono::DateTime<Utc>, String)>()
     {
-        if let Some(Ok((short_url, _, _))) = rows.next() {
+        if let Some(Ok((short_url, _, _))) = rows.last() {
+            println!("Existing entry found");
             return Ok(web::Json(CreateShortUrlResponse { short_url }));
         }
     }

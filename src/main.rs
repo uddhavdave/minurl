@@ -15,7 +15,7 @@ use apis::create;
 use apis::metrics;
 use apis::redirect_req;
 use db::DbExecutor;
-use middleware::capture_usage;
+use middleware::capture_redirection_usage;
 
 use std::sync::RwLock;
 
@@ -27,8 +27,6 @@ pub type Cache = Arc<RwLock<CacheInner>>;
 pub struct CacheInner {
     /// Maps shortened URIs to their respective URLs
     map: HashMap<Uri, Url>,
-    /// Tracks usage of short Urls
-    usage_map: HashMap<Url, u32>,
 }
 
 impl CacheInner {
@@ -36,8 +34,6 @@ impl CacheInner {
         CacheInner {
             // Mapping ShortUrls -> LongUrls
             map: HashMap::new(),
-            // Metrics
-            usage_map: HashMap::new(),
         }
     }
 }
@@ -55,16 +51,14 @@ async fn main() -> std::io::Result<()> {
     println!("Init Database.....");
     let db_handler = Data::new(DbExecutor::build().await.expect("connection failed"));
 
-    println!("Started listening on port 8080");
+    println!("Started listening on port 8088");
     HttpServer::new(move || {
         App::new()
             .service(create)
             .service(metrics)
             .service(redirect_req)
             // following is the middleware function which updates the stats for analytics
-            // Ideally these changes are made in a different Transaction or are
-            // pushed to an external service like apache kafka, but here we are
-            // tracking it on memory
+            // where we are pushing metrics to prometheus
             .app_data(db_handler.clone())
             .wrap_fn(|req, svc| {
                 let fut = svc.call(req);
@@ -75,13 +69,13 @@ async fn main() -> std::io::Result<()> {
                         let url = location.to_str().map_err(|_| {
                             actix_web::error::ErrorInternalServerError("Invalid redirection url")
                         })?;
-                        let _ = capture_usage(url);
+                        capture_redirection_usage(res.status(), url);
                     }
                     Ok(res)
                 }
             })
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("0.0.0.0", 8088))?
     .run()
     .await
 }

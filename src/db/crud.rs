@@ -13,18 +13,12 @@ pub async fn prepare_insert_to_url(session: &Session) -> DbResult<PreparedStatem
 
 pub async fn prepare_get_url_by_uri(session: &Session) -> DbResult<PreparedStatement> {
     session
-        .prepare(
-            "SELECT * FROM minurl.urls
-        WHERE uri = (?)",
-        )
+        .prepare("SELECT * FROM minurl.urls WHERE uri = ?")
         .await
 }
 
 pub async fn prepare_get_url_by_long_url(session: &Session) -> DbResult<PreparedStatement> {
     session
-        .prepare(
-            "SELECT * FROM minurl.urls
-        WHERE longurl = (?)",
-        )
+        .prepare("SELECT * FROM minurl.urls WHERE longurl = ?")
         .await
 }

@@ -1,10 +1,11 @@
 # MINURL
-An on-memory URl shortner with metrics API. Supports 68 billion Unique URls without collision. 
+An on-memory URl shortner with metrics API. Supports 68 billion Unique URls without collision.
 
 # Design
-The program runs independently with a cache which is mapped to each instance. This cache can later be replaced by redis and made into a shared cache so that all instances spawned can share the same state. Program tracks all the shortened URls and keeps track of the hit rate of each redirect, which is done by middleware logic for all requests.
+Designed with Scalability and Observability in mind, this application uses Cassandra as its Data Store and has caching enabled by default
+to provide blazingly fast redirects to original URL, and has Prometheus and Grafana integration to monitor the granular usage statistics.
 
-## TODO
-- Dockerize the binary
-- Add Cassandra support
-- Add CRUD apis for Url management
+## ROADMAP
+- [ ] Add Session management
+- [ ] Improve cache by using concurrent HashMaps
+- [ ] Provide dashboard template for Grafana

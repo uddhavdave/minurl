@@ -8,8 +8,6 @@ pub enum ApiError {
     DatabaseConnFailed(String),
     #[error("Database Txn failed: {0}")]
     DbTxnFailure(String),
-    #[error("Request failed")]
-    RequestFailed,
 }
 
 impl ResponseError for ApiError {
@@ -19,7 +17,6 @@ impl ResponseError for ApiError {
                 .body(format!("Database connection failed: {}", message)),
             ApiError::DbTxnFailure(ref message) => HttpResponse::InternalServerError()
                 .body(format!("Database transaction failed: {}", message)),
-            ApiError::RequestFailed => HttpResponse::BadRequest().body("Request failed"),
         }
     }
 }

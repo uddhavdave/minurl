@@ -9,6 +9,8 @@ base64 = "0.22.0"
 chrono = { version  = "0.4", features = ["serde"]}
 lazy_static = "1.4.0"
 md5 = "0.7.0"
+mime = "0.3.17"
+prometheus = "0.13.4"
 scylla = { version = "0.12.0", features = ["chrono"]}
 scylla-macros = "0.4.0"
 serde = {version = "1.0.197", features= ["derive"]}

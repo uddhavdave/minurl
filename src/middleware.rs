@@ -1,26 +1,18 @@
-use actix_web::Result;
+use actix_web::http::StatusCode;
+use lazy_static::lazy_static;
+use prometheus::{opts, register_int_counter_vec, IntCounterVec};
 
-use crate::CACHE;
+lazy_static! {
+    pub static ref HTTP_MINURL_REQUESTS_TOTAL: IntCounterVec = register_int_counter_vec!(
+        opts!("http_minurl_requests", "HTTP MinURL requests"),
+        &["status", "redirect_to"]
+    )
+    .expect("Can't create HTTP_REQUESTS_TOTAL metric");
+}
 
-/// This function at the moment just updates the local cache for usage
-/// It is called post processing the request as to avoid the overhead of writing
-/// to disks in future
-pub fn capture_usage(req_uri: &str) -> Result<()> {
-    // Since this function is called after the processing
-    // We can assume all the necessary checks are made, and hence we can
-    // update the cache directly
-    let mut wcache = CACHE.write().unwrap();
-
-    wcache
-        .usage_map
-        .entry(req_uri.into())
-        .and_modify(|count| *count += 1)
-        .or_insert(1);
-
-    println!(
-        "updated usage stats for {} to {}",
-        req_uri,
-        wcache.usage_map.get(req_uri).unwrap()
-    );
-    Ok(())
+/// Middleware function to capture minurl redirect requests for prometheus server
+pub fn capture_redirection_usage(status: StatusCode, redirected_url: &str) {
+    HTTP_MINURL_REQUESTS_TOTAL
+        .with_label_values(&[status.as_str(), redirected_url])
+        .inc();
 }
