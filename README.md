@@ -1,5 +1,5 @@
 # MINURL
-An on-memory URl shortner with metrics API. Supports 68 billion Unique URls without collision.
+An in-memory URl shortner with metrics API. Supports 68 billion Unique URls without collision.
 
 # Design
 Designed with Scalability and Observability in mind, this application uses Cassandra as its Data Store and has caching enabled by default
